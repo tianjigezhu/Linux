@@ -1,0 +1,970 @@
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
+int main()
+{
+  char c;
+  int in, out;
+
+  in = open("file.in", O_RDONLY);
+  out = open("file.out", 0_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+
+  while (read(in, &c, 1) == 1)
+    write(out, &c, 1);
+
+  exit(0);
+}
+OPEN(3POSIX)                                                                    POSIX Programmer's Manual                                                                    OPEN(3POSIX)
+
+PROLOG
+       This  manual  page  is  part  of the POSIX Programmer's Manual.  The Linux implementation of this interface may differ (consult the corresponding Linux manual page for details of
+       Linux behavior), or the interface may not be implemented on Linux.
+
+NAME
+       open, openat — open file relative to directory file descriptor
+
+SYNOPSIS
+       #include <sys/stat.h>
+       #include <fcntl.h>
+
+       int open(const char *path, int oflag, ...);
+       int openat(int fd, const char *path, int oflag, ...);
+
+DESCRIPTION
+       The open() function shall establish the connection between a file and a file descriptor. It shall create an open file description that refers to a file and a file descriptor that
+       refers to that open file description.  The file descriptor is used by other I/O functions to refer to that file. The path argument points to a pathname naming the file.
+
+       The  open()  function  shall return a file descriptor for the named file that is the lowest file descriptor not currently open for that process. The open file description is new,
+       and therefore the file descriptor shall not share it with any other process in the system. The FD_CLOEXEC file descriptor flag associated with the new file  descriptor  shall  be
+       cleared unless the O_CLOEXEC flag is set in oflag.
+
+       The file offset used to mark the current position within the file shall be set to the beginning of the file.
+
+       The file status flags and file access modes of the open file description shall be set according to the value of oflag.
+
+       Values  for oflag are constructed by a bitwise-inclusive OR of flags from the following list, defined in <fcntl.h>.  Applications shall specify exactly one of the first five val‐
+       ues (file access modes) below in the value of oflag:
+
+       O_EXEC        Open for execute only (non-directory files). The result is unspecified if this flag is applied to a directory.
+
+       O_RDONLY      Open for reading only.
+
+       O_RDWR        Open for reading and writing. The result is undefined if this flag is applied to a FIFO.
+
+       O_SEARCH      Open directory for search only. The result is unspecified if this flag is applied to a non-directory file.
+
+       O_WRONLY      Open for writing only.
+
+       Any combination of the following may be used:
+
+       O_APPEND      If set, the file offset shall be set to the end of the file prior to each write.
+
+       O_CLOEXEC     If set, the FD_CLOEXEC flag for the new file descriptor shall be set.
+
+       O_CREAT       If the file exists, this flag has no effect except as noted under O_EXCL below. Otherwise, the file shall be created; the user ID of the file shall be  set  to  the
+                     effective  user ID of the process; the group ID of the file shall be set to the group ID of the file's parent directory or to the effective group ID of the process;
+                     and the access permission bits (see <sys/stat.h>) of the file mode shall be set to the value of the argument following the oflag argument taken as type mode_t modi‐
+                     fied  as  follows:  a bitwise AND is performed on the file-mode bits and the corresponding bits in the complement of the process' file mode creation mask. Thus, all
+                     bits in the file mode whose corresponding bit in the file mode creation mask is set are cleared. When bits other than the file permission bits are set,  the  effect
+                     is  unspecified. The argument following the oflag argument does not affect whether the file is open for reading, writing, or for both. Implementations shall provide
+                     a way to initialize the file's group ID to the group ID of the parent directory. Implementations may, but need not, provide an implementation-defined  way  to  ini‐
+                     tialize the file's group ID to the effective group ID of the calling process.
+
+       O_DIRECTORY   If path resolves to a non-directory file, fail and set errno to [ENOTDIR].
+
+       O_DSYNC       Write I/O operations on the file descriptor shall complete as defined by synchronized I/O data integrity completion.
+
+       O_EXCL        If O_CREAT and O_EXCL are set, open() shall fail if the file exists. The check for the existence of the file and the creation of the file if it does not exist shall
+                     be atomic with respect to other threads executing open() naming the same filename in the same directory with O_EXCL and O_CREAT set. If O_EXCL and O_CREAT are  set,
+                     and  path  names  a symbolic link, open() shall fail and set errno to [EEXIST], regardless of the contents of the symbolic link. If O_EXCL is set and O_CREAT is not
+                     set, the result is undefined.
+
+       O_NOCTTY      If set and path identifies a terminal device, open() shall not cause the terminal device to become the controlling terminal for the process. If path does not  iden‐
+                     tify a terminal device, O_NOCTTY shall be ignored.
+
+       O_NOFOLLOW    If path names a symbolic link, fail and set errno to [ELOOP].
+
+       O_NONBLOCK    When opening a FIFO with O_RDONLY or O_WRONLY set:
+
+                      *  If  O_NONBLOCK  is  set, an open() for reading-only shall return without delay. An open() for writing-only shall return an error if no process currently has the
+                         file open for reading.
+
+                      *  If O_NONBLOCK is clear, an open() for reading-only shall block the calling thread until a thread opens the file for writing. An open()  for  writing-only  shall
+                         block the calling thread until a thread opens the file for reading.
+
+                     When opening a block special or character special file that supports non-blocking opens:
+
+                      *  If  O_NONBLOCK  is  set, the open() function shall return without blocking for the device to be ready or available. Subsequent behavior of the device is device-
+                         specific.
+
+                      *  If O_NONBLOCK is clear, the open() function shall block the calling thread until the device is ready or available before returning.
+
+                     Otherwise, the O_NONBLOCK flag shall not cause an error, but it is unspecified whether the file status flags will include the O_NONBLOCK flag.
+
+       O_RSYNC       Read I/O operations on the file descriptor shall complete at the same level of integrity as specified by the O_DSYNC and O_SYNC flags. If both O_DSYNC  and  O_RSYNC
+                     are  set in oflag, all I/O operations on the file descriptor shall complete as defined by synchronized I/O data integrity completion. If both O_SYNC and O_RSYNC are
+                     set in flags, all I/O operations on the file descriptor shall complete as defined by synchronized I/O file integrity completion.
+
+       O_SYNC        Write I/O operations on the file descriptor shall complete as defined by synchronized I/O file integrity completion.
+
+                     The O_SYNC flag shall be supported for regular files, even if the Synchronized Input and Output option is not supported.
+
+       O_TRUNC       If the file exists and is a regular file, and the file is successfully opened O_RDWR or O_WRONLY, its length shall be truncated to 0, and the mode and  owner  shall
+                     be  unchanged. It shall have no effect on FIFO special files or terminal device files. Its effect on other file types is implementation-defined. The result of using
+                     O_TRUNC without either O_RDWR or O_WRONLY is undefined.
+
+       O_TTY_INIT    If path identifies a terminal device other than a pseudo-terminal, the device is not already open in  any  process,  and  either  O_TTY_INIT  is  set  in  oflag  or
+                     O_TTY_INIT  has  the  value zero, open() shall set any non-standard termios structure terminal parameters to a state that provides conforming behavior; see the Base
+                     Definitions volume of POSIX.1‐2008, Section 11.2, Parameters that Can be Set.  It is unspecified whether O_TTY_INIT has any effect if the device is already open  in
+                     any  process.  If  path  identifies the slave side of a pseudo-terminal that is not already open in any process, open() shall set any non-standard termios structure
+                     terminal parameters to a state that provides conforming behavior, regardless of whether O_TTY_INIT is set. If path does not identify a terminal  device,  O_TTY_INIT
+                     shall be ignored.
+
+       If O_CREAT is set and the file did not previously exist, upon successful completion, open() shall mark for update the last data access, last data modification, and last file sta‐
+       tus change timestamps of the file and the last data modification and last file status change timestamps of the parent directory.
+
+       If O_TRUNC is set and the file did previously exist, upon successful completion, open() shall mark for update the last data modification and last file status change timestamps of
+       the file.
+
+       If both the O_SYNC and O_DSYNC flags are set, the effect is as if only the O_SYNC flag was set.
+
+       If  path  refers  to  a  STREAMS  file,  oflag may be constructed from O_NONBLOCK OR'ed with either O_RDONLY, O_WRONLY, or O_RDWR. Other flag values are not applicable to STREAMS
+       devices and shall have no effect on them. The value O_NONBLOCK affects the operation of STREAMS drivers and certain functions applied to file descriptors associated with  STREAMS
+       files. For STREAMS drivers, the implementation of O_NONBLOCK is device-specific.
+
+       The  application  shall  ensure  that it specifies the O_TTY_INIT flag on the first open of a terminal device since system boot or since the device was closed by the process that
+       last had it open. The application need not specify the O_TTY_INIT flag when opening pseudo-terminals.  If path names the master side of  a  pseudo-terminal  device,  then  it  is
+       unspecified whether open() locks the slave side so that it cannot be opened. Conforming applications shall call unlockpt() before opening the slave side.
+
+       The largest value that can be represented correctly in an object of type off_t shall be established as the offset maximum in the open file description.
+
+       The  openat()  function shall be equivalent to the open() function except in the case where path specifies a relative path. In this case the file to be opened is determined rela‐
+       tive to the directory associated with the file descriptor fd instead of the current working directory. If the file descriptor was opened  without  O_SEARCH,  the  function  shall
+       check whether directory searches are permitted using the current permissions of the directory underlying the file descriptor. If the file descriptor was opened with O_SEARCH, the
+       function shall not perform the check.
+
+       The oflag parameter and the optional fourth parameter correspond exactly to the parameters of open().
+
+       If openat() is passed the special value AT_FDCWD in the fd parameter, the current working directory shall be used and the behavior shall be identical to a call to open().
+
+RETURN VALUE
+       Upon successful completion, these functions shall open the file and return a non-negative integer representing the lowest numbered unused file descriptor. Otherwise, these  func‐
+       tions shall return −1 and set errno to indicate the error. If −1 is returned, no files shall be created or modified.
+
+ERRORS
+       These functions shall fail if:
+
+       EACCES Search  permission  is denied on a component of the path prefix, or the file exists and the permissions specified by oflag are denied, or the file does not exist and write
+              permission is denied for the parent directory of the file to be created, or O_TRUNC is specified and write permission is denied.
+
+       EEXIST O_CREAT and O_EXCL are set, and the named file exists.
+
+       EINTR  A signal was caught during open().
+
+       EINVAL The implementation does not support synchronized I/O for this file.
+
+       EIO    The path argument names a STREAMS file and a hangup or error occurred during the open().
+
+       EISDIR The named file is a directory and oflag includes O_WRONLY or O_RDWR.
+
+       ELOOP  A loop exists in symbolic links encountered during resolution of the path argument, or O_NOFOLLOW was specified and the path argument names a symbolic link.
+
+       EMFILE All file descriptors available to the process are currently open.
+
+       ENAMETOOLONG
+              The length of a component of a pathname is longer than {NAME_MAX}.
+
+       ENFILE The maximum allowable number of files is currently open in the system.
+
+       ENOENT O_CREAT is not set and a component of path does not name an existing file, or O_CREAT is set and a component of the path prefix of path does not name an existing file,  or
+              path points to an empty string.
+
+       ENOENT or ENOTDIR
+              O_CREAT is set, and the path argument contains at least one non-<slash> character and ends with one or more trailing <slash> characters. If path names an existing file, an
+              [ENOENT] error shall not occur.
+
+       ENOSR  The path argument names a STREAMS-based file and the system is unable to allocate a STREAM.
+
+       ENOSPC The directory or file system that would contain the new file cannot be expanded, the file does not exist, and O_CREAT is specified.
+
+       ENOTDIR
+              A component of the path prefix names an existing file that is neither a directory nor a symbolic link to a directory; or O_CREAT and O_EXCL are  not  specified,  the  path
+              argument  contains at least one non-<slash> character and ends with one or more trailing <slash> characters, and the last pathname component names an existing file that is
+              neither a directory nor a symbolic link to a directory; or O_DIRECTORY was specified and the path argument resolves to a non-directory file.
+
+       ENXIO  O_NONBLOCK is set, the named file is a FIFO, O_WRONLY is set, and no process has the file open for reading.
+
+       ENXIO  The named file is a character special or block special file, and the device associated with this special file does not exist.
+
+       EOVERFLOW
+              The named file is a regular file and the size of the file cannot be represented correctly in an object of type off_t.
+
+       EROFS  The named file resides on a read-only file system and either O_WRONLY, O_RDWR, O_CREAT (if the file does not exist), or O_TRUNC is set in the oflag argument.
+
+       The openat() function shall fail if:
+
+       EACCES fd was not opened with O_SEARCH and the permissions of the directory underlying fd do not permit directory searches.
+
+       EBADF  The path argument does not specify an absolute path and the fd argument is neither AT_FDCWD nor a valid file descriptor open for reading or searching.
+
+       ENOTDIR
+              The path argument is not an absolute path and fd is a file descriptor associated with a non-directory file.
+
+       These functions may fail if:
+
+       EAGAIN The path argument names the slave side of a pseudo-terminal device that is locked.
+
+       EINVAL The value of the oflag argument is not valid.
+
+       ELOOP  More than {SYMLOOP_MAX} symbolic links were encountered during resolution of the path argument.
+
+       ENAMETOOLONG
+              The length of a pathname exceeds {PATH_MAX}, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds {PATH_MAX}.
+
+       ENOMEM The path argument names a STREAMS file and the system is unable to allocate resources.
+
+       ETXTBSY
+              The file is a pure procedure (shared text) file that is being executed and oflag is O_WRONLY or O_RDWR.
+
+       The following sections are informative.
+
+EXAMPLES
+   Opening a File for Writing by the Owner
+       The following example opens the file /tmp/file, either by creating it (if it does not already exist), or by truncating its length to 0 (if it does exist). In the former case,  if
+       the  call creates a new file, the access permission bits in the file mode of the file are set to permit reading and writing by the owner, and to permit reading only by group mem‐
+       bers and others.
+
+       If the call to open() is successful, the file is opened for writing.
+
+           #include <fcntl.h>
+           ...
+           int fd;
+           mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+           char *pathname = "/tmp/file";
+           ...
+           fd = open(pathname, O_WRONLY | O_CREAT | O_TRUNC, mode);
+           ...
+
+   Opening a File Using an Existence Check
+       The following example uses the open() function to try to create the LOCKFILE file and open it for writing. Since the open() function specifies the O_EXCL flag, the call fails  if
+       the file already exists. In that case, the program assumes that someone else is updating the password file and exits.
+
+           #include <fcntl.h>
+           #include <stdio.h>
+           #include <stdlib.h>
+
+           #define LOCKFILE "/etc/ptmp"
+           ...
+           int pfd; /* Integer for file descriptor returned by open() call. */
+           ...
+           if ((pfd = open(LOCKFILE, O_WRONLY | O_CREAT | O_EXCL,
+               S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1)
+           {
+               fprintf(stderr, "Cannot open /etc/ptmp. Try again later.\n");
+               exit(1);
+           }
+           ...
+
+   Opening a File for Writing
+       The following example opens a file for writing, creating the file if it does not already exist. If the file does exist, the system truncates the file to zero bytes.
+
+           #include <fcntl.h>
+           #include <stdio.h>
+           #include <stdlib.h>
+
+           #define LOCKFILE "/etc/ptmp"
+           ...
+           int pfd;
+           char pathname[PATH_MAX+1];
+           ...
+           if ((pfd = open(pathname, O_WRONLY | O_CREAT | O_TRUNC,
+               S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1)
+           {
+               perror("Cannot open output file\n"); exit(1);
+           }
+           ...
+
+APPLICATION USAGE
+       POSIX.1‐2008 does not require that terminal parameters be automatically set to any state on first open, nor that they be reset after the last close. It is possible for a non-con‐
+       forming application to leave a terminal device in a state where the next process to use that device finds it in a non-conforming state, but has no way  of  determining  this.  To
+       ensure  that  the  device  is  set  to  a  conforming  initial  state, applications which perform a first open of a terminal (other than a pseudo-terminal) should do so using the
+       O_TTY_INIT flag to set the parameters associated with the terminal to a conforming state.
+
+       Except as specified in this volume of POSIX.1‐2008, the flags allowed in oflag are not mutually-exclusive and any number of them may be used simultaneously. Not all  combinations
+       of  flags  make sense. For example, using O_SEARCH | O_CREAT will successfully open a pre-existing directory for searching, but if there is no existing file by that name, then it
+       is unspecified whether a regular file will be created. Likewise, if a non-directory file descriptor is successfully returned, it is unspecified whether that descriptor will  have
+       execute permissions as if by O_EXEC (note that it is unspecified whether O_EXEC and O_SEARCH have the same value).
+
+RATIONALE
+       Some  implementations permit opening FIFOs with O_RDWR. Since FIFOs could be implemented in other ways, and since two file descriptors can be used to the same effect, this possi‐
+       bility is left as undefined.
+
+       See getgroups() about the group of a newly created file.
+
+       The use of open() to create a regular file is preferable to the use of creat(), because the latter is redundant and included only for historical reasons.
+
+       The use of the O_TRUNC flag on FIFOs and directories (pipes cannot be open()-ed) must be permissible without unexpected side-effects (for example, creat()  on  a  FIFO  must  not
+       remove data). Since terminal special files might have type-ahead data stored in the buffer, O_TRUNC should not affect their content, particularly if a program that normally opens
+       a regular file should open the current controlling terminal instead. Other file types, particularly implementation-defined ones, are left implementation-defined.
+
+       POSIX.1‐2008 permits [EACCES] to be returned for conditions other than those explicitly listed.
+
+       The O_NOCTTY flag was added to allow applications to avoid unintentionally acquiring a controlling terminal  as  a  side-effect  of  opening  a  terminal  file.  This  volume  of
+       POSIX.1‐2008  does  not specify how a controlling terminal is acquired, but it allows an implementation to provide this on open() if the O_NOCTTY flag is not set and other condi‐
+       tions specified in the Base Definitions volume of POSIX.1‐2008, Chapter 11, General Terminal Interface are met.
+
+       In historical implementations the value of O_RDONLY is zero. Because of that, it is not possible to detect the presence of O_RDONLY and  another  option.  Future  implementations
+       should encode O_RDONLY and O_WRONLY as bit flags so that:
+
+           O_RDONLY | O_WRONLY == O_RDWR
+
+       O_EXEC  and  O_SEARCH are specified as two of the five file access modes.  Since O_EXEC does not apply to directories, and O_SEARCH only applies to directories, their values need
+       not be distinct. Since O_RDONLY has historically had the value zero, implementations are not able to distinguish between O_SEARCH and  O_SEARCH  |  O_RDONLY,  and  similarly  for
+       O_EXEC.
+
+       In  general,  the  open() function follows the symbolic link if path names a symbolic link. However, the open() function, when called with O_CREAT and O_EXCL, is required to fail
+       with [EEXIST] if path names an existing symbolic link, even if the symbolic link refers to a nonexistent file. This behavior is required so that privileged applications can  cre‐
+       ate a new file in a known location without the possibility that a symbolic link might cause the file to be created in a different location.
+
+       For example, a privileged application that must create a file with a predictable name in a user-writable directory, such as the user's home directory, could be compromised if the
+       user creates a symbolic link with that name that refers to a nonexistent file in a system directory. If the user can influence the contents of a file, the user  could  compromise
+       the system by creating a new system configuration or spool file that would then be interpreted by the system. The test for a symbolic link which refers to a nonexisting file must
+       be atomic with the creation of a new file.
+
+       In addition, the open() function refuses to open non-directories if the O_DIRECTORY flag is set. This avoids race conditions whereby a user might compromise the system by substi‐
+       tuting  a  hard  link  to  a sensitive file (e.g., a device or a FIFO) while a privileged application is running, where opening a file even for read access might have undesirable
+       side-effects.
+
+       In addition, the open() function does not follow symbolic links if the O_NOFOLLOW flag is set.  This avoids race conditions whereby a user might compromise the system by  substi‐
+       tuting  a  symbolic  link  to  a sensitive file (e.g., a device) while a privileged application is running, where opening a file even for read access might have undesirable side-
+       effects.
+
+       The POSIX.1‐1990 standard required that the group ID of a newly created file be set to the group ID of its parent directory or to the effective group ID of the creating  process.
+       FIPS 151‐2 required that implementations provide a way to have the group ID be set to the group ID of the containing directory, but did not prohibit implementations also support‐
+       ing a way to set the group ID to the effective group ID of the creating process.  Conforming applications should not assume which group ID will be used. If it matters, an  appli‐
+       cation can use chown() to set the group ID after the file is created, or determine under what conditions the implementation will set the desired group ID.
+
+       The  purpose of the openat() function is to enable opening files in directories other than the current working directory without exposure to race conditions. Any part of the path
+       of a file could be changed in parallel to a call to open(), resulting in unspecified behavior. By opening a file descriptor for the target directory and using the openat()  func‐
+       tion  it  can  be guaranteed that the opened file is located relative to the desired directory. Some implementations use the openat() function for other purposes as well. In some
+       cases, if the oflag parameter has the O_XATTR bit set, the returned file descriptor provides access to extended attributes. This functionality is not standardized here.
+
+FUTURE DIRECTIONS
+       None.
+
+SEE ALSO
+       chmod(), close(), creat(), dirfd(), dup(), exec, fcntl(), fdopendir(), link(), lseek(), mkdtemp(), mknod(), read(), symlink(), umask(), unlockpt(), write()
+
+       The Base Definitions volume of POSIX.1‐2008, Chapter 11, General Terminal Interface, <fcntl.h>, <sys_stat.h>, <sys_types.h>
+
+COPYRIGHT
+       Portions of this text are reprinted and reproduced in electronic form from IEEE Std 1003.1, 2013 Edition, Standard for Information Technology -- Portable Operating System  Inter‐
+       face  (POSIX),  The  Open  Group  Base  Specifications  Issue  7,  Copyright  (C) 2013 by the Institute of Electrical and Electronics Engineers, Inc and The Open Group.  (This is
+       POSIX.1-2008 with the 2013 Technical Corrigendum 1 applied.) In the event of any discrepancy between this version and the original IEEE and The Open Group Standard, the  original
+       IEEE and The Open Group Standard is the referee document. The original Standard can be obtained online at http://www.unix.org/online.html .
+
+       Any  typographical  or  formatting errors that appear in this page are most likely to have been introduced during the conversion of the source files to man page format. To report
+       such errors, see https://www.kernel.org/doc/man-pages/reporting_bugs.html .
+
+IEEE/The Open Group                                                                        2013                                                                              OPEN(3POSIX)
+WRITE(3POSIX)                                                                   POSIX Programmer's Manual                                                                   WRITE(3POSIX)
+
+PROLOG
+       This  manual  page  is  part  of the POSIX Programmer's Manual.  The Linux implementation of this interface may differ (consult the corresponding Linux manual page for details of
+       Linux behavior), or the interface may not be implemented on Linux.
+
+NAME
+       pwrite, write — write on a file
+
+SYNOPSIS
+       #include <unistd.h>
+
+       ssize_t pwrite(int fildes, const void *buf, size_t nbyte,
+           off_t offset);
+       ssize_t write(int fildes, const void *buf, size_t nbyte);
+
+DESCRIPTION
+       The write() function shall attempt to write nbyte bytes from the buffer pointed to by buf to the file associated with the open file descriptor, fildes.
+
+       Before any action described below is taken, and if nbyte is zero and the file is a regular file, the write() function may detect and return errors  as  described  below.  In  the
+       absence  of errors, or if error detection is not performed, the write() function shall return zero and have no other results. If nbyte is zero and the file is not a regular file,
+       the results are unspecified.
+
+       On a regular file or other file capable of seeking, the actual writing of data shall proceed from the position in the file indicated by the file offset  associated  with  fildes.
+       Before  successful  return from write(), the file offset shall be incremented by the number of bytes actually written. On a regular file, if the position of the last byte written
+       is greater than or equal to the length of the file, the length of the file shall be set to this position plus one.
+
+       On a file not capable of seeking, writing shall always take place starting at the current position. The value of a file offset associated with such a device is undefined.
+
+       If the O_APPEND flag of the file status flags is set, the file offset shall be set to the end of the file prior to each write and no intervening file modification operation shall
+       occur between changing the file offset and the write operation.
+
+       If  a  write() requests that more bytes be written than there is room for (for example, the file size limit of the process or the physical end of a medium), only as many bytes as
+       there is room for shall be written. For example, suppose there is space for 20 bytes more in a file before reaching a limit. A write of 512 bytes will return 20. The  next  write
+       of a non-zero number of bytes would give a failure return (except as noted below).
+
+       If  the  request  would  cause  the  file size to exceed the soft file size limit for the process and there is no room for any bytes to be written, the request shall fail and the
+       implementation shall generate the SIGXFSZ signal for the thread.
+
+       If write() is interrupted by a signal before it writes any data, it shall return −1 with errno set to [EINTR].
+
+       If write() is interrupted by a signal after it successfully writes some data, it shall return the number of bytes written.
+
+       If the value of nbyte is greater than {SSIZE_MAX}, the result is implementation-defined.
+
+       After a write() to a regular file has successfully returned:
+
+        *  Any successful read() from each byte position in the file that was modified by that write shall return the data specified by the write() for that  position  until  such  byte
+           positions are again modified.
+
+        *  Any subsequent successful write() to the same byte position in the file shall overwrite that file data.
+
+       Write requests to a pipe or FIFO shall be handled in the same way as a regular file with the following exceptions:
+
+        *  There is no file offset associated with a pipe, hence each write request shall append to the end of the pipe.
+
+        *  Write  requests of {PIPE_BUF} bytes or less shall not be interleaved with data from other processes doing writes on the same pipe. Writes of greater than {PIPE_BUF} bytes may
+           have data interleaved, on arbitrary boundaries, with writes by other processes, whether or not the O_NONBLOCK flag of the file status flags is set.
+
+        *  If the O_NONBLOCK flag is clear, a write request may cause the thread to block, but on normal completion it shall return nbyte.
+
+        *  If the O_NONBLOCK flag is set, write() requests shall be handled differently, in the following ways:
+
+           --  The write() function shall not block the thread.
+
+           --  A write request for {PIPE_BUF} or fewer bytes shall have the following effect: if there is sufficient space available in the pipe, write() shall transfer all the data and
+               return the number of bytes requested.  Otherwise, write() shall transfer no data and return −1 with errno set to [EAGAIN].
+
+           --  A write request for more than {PIPE_BUF} bytes shall cause one of the following:
+
+               --  When  at  least  one  byte can be written, transfer what it can and return the number of bytes written. When all data previously written to the pipe is read, it shall
+                   transfer at least {PIPE_BUF} bytes.
+
+               --  When no data can be written, transfer no data, and return −1 with errno set to [EAGAIN].
+
+       When attempting to write to a file descriptor (other than a pipe or FIFO) that supports non-blocking writes and cannot accept the data immediately:
+
+        *  If the O_NONBLOCK flag is clear, write() shall block the calling thread until the data can be accepted.
+
+        *  If the O_NONBLOCK flag is set, write() shall not block the thread. If some data can be written without blocking the thread, write() shall write what it  can  and  return  the
+           number of bytes written.  Otherwise, it shall return −1 and set errno to [EAGAIN].
+
+       Upon successful completion, where nbyte is greater than 0, write() shall mark for update the last data modification and last file status change timestamps of the file, and if the
+       file is a regular file, the S_ISUID and S_ISGID bits of the file mode may be cleared.
+
+       For regular files, no data transfer shall occur past the offset maximum established in the open file description associated with fildes.
+
+       If fildes refers to a socket, write() shall be equivalent to send() with no flags set.
+
+       If the O_DSYNC bit has been set, write I/O operations on the file descriptor shall complete as defined by synchronized I/O data integrity completion.
+
+       If the O_SYNC bit has been set, write I/O operations on the file descriptor shall complete as defined by synchronized I/O file integrity completion.
+
+       If fildes refers to a shared memory object, the result of the write() function is unspecified.
+
+       If fildes refers to a typed memory object, the result of the write() function is unspecified.
+
+       If fildes refers to a STREAM, the operation of write() shall be determined by the values of the minimum and maximum nbyte range (packet size) accepted by the STREAM. These values
+       are  determined  by  the topmost STREAM module. If nbyte falls within the packet size range, nbyte bytes shall be written. If nbyte does not fall within the range and the minimum
+       packet size value is 0, write() shall break the buffer into maximum packet size segments prior to sending the data downstream (the last segment may contain less than the  maximum
+       packet size). If nbyte does not fall within the range and the minimum value is non-zero, write() shall fail with errno set to [ERANGE].  Writing a zero-length buffer (nbyte is 0)
+       to a STREAMS device sends 0 bytes with 0 returned. However, writing a zero-length buffer to a STREAMS-based pipe or FIFO sends no message and 0 is returned. The process may issue
+       I_SWROPT ioctl() to enable zero-length messages to be sent across the pipe or FIFO.
+
+       When writing to a STREAM, data messages are created with a priority band of 0. When writing to a STREAM that is not a pipe or FIFO:
+
+        *  If  O_NONBLOCK  is  clear,  and  the STREAM cannot accept data (the STREAM write queue is full due to internal flow control conditions), write() shall block until data can be
+           accepted.
+
+        *  If O_NONBLOCK is set and the STREAM cannot accept data, write() shall return −1 and set errno to [EAGAIN].
+
+        *  If O_NONBLOCK is set and part of the buffer has been written while a condition in which the STREAM cannot accept additional data occurs, write() shall  terminate  and  return
+           the number of bytes written.
+
+       In  addition,  write() shall fail if the STREAM head has processed an asynchronous error before the call. In this case, the value of errno does not reflect the result of write(),
+       but reflects the prior error.
+
+       The pwrite() function shall be equivalent to write(), except that it writes into a given position and does not change the file offset (regardless of whether O_APPEND is set). The
+       first three arguments to pwrite() are the same as write() with the addition of a fourth argument offset for the desired position inside the file. An attempt to perform a pwrite()
+       on a file that is incapable of seeking shall result in an error.
+
+RETURN VALUE
+       Upon successful completion, these functions shall return the number of bytes actually written to the file associated with fildes.  This number shall never be greater than  nbyte.
+       Otherwise, −1 shall be returned and errno set to indicate the error.
+
+ERRORS
+       These functions shall fail if:
+
+       EAGAIN The file is neither a pipe, nor a FIFO, nor a socket, the O_NONBLOCK flag is set for the file descriptor, and the thread would be delayed in the write() operation.
+
+       EBADF  The fildes argument is not a valid file descriptor open for writing.
+
+       EFBIG  An attempt was made to write a file that exceeds the implementation-defined maximum file size or the file size limit of the process, and there was no room for any bytes to
+              be written.
+
+       EFBIG  The file is a regular file, nbyte is greater than 0, and the starting position is greater than or equal to the offset maximum established  in  the  open  file  description
+              associated with fildes.
+
+       EINTR  The write operation was terminated due to the receipt of a signal, and no data was transferred.
+
+       EIO    The  process  is  a  member  of  a background process group attempting to write to its controlling terminal, TOSTOP is set, the calling thread is not blocking SIGTTOU, the
+              process is not ignoring SIGTTOU, and the process group of the process is orphaned. This error may also be returned under implementation-defined conditions.
+
+       ENOSPC There was no free space remaining on the device containing the file.
+
+       ERANGE The transfer request size was outside the range supported by the STREAMS file associated with fildes.
+
+       The pwrite() function shall fail if:
+
+       EINVAL The file is a regular file or block special file, and the offset argument is negative. The file pointer shall remain unchanged.
+
+       ESPIPE The file is a pipe, FIFO, or socket.
+
+       The write() function shall fail if:
+
+       EAGAIN The file is a pipe or FIFO, the O_NONBLOCK flag is set for the file descriptor, and the thread would be delayed in the write operation.
+
+       EAGAIN or EWOULDBLOCK
+              The file is a socket, the O_NONBLOCK flag is set for the file descriptor, and the thread would be delayed in the write operation.
+
+       ECONNRESET
+              A write was attempted on a socket that is not connected.
+
+       EPIPE  An attempt is made to write to a pipe or FIFO that is not open for reading by any process, or that only has one end open. A SIGPIPE  signal  shall  also  be  sent  to  the
+              thread.
+
+       EPIPE  A  write  was  attempted  on  a socket that is shut down for writing, or is no longer connected. In the latter case, if the socket is of type SOCK_STREAM, a SIGPIPE signal
+              shall also be sent to the thread.
+
+       These functions may fail if:
+
+       EINVAL The STREAM or multiplexer referenced by fildes is linked (directly or indirectly) downstream from a multiplexer.
+
+       EIO    A physical I/O error has occurred.
+
+       ENOBUFS
+              Insufficient resources were available in the system to perform the operation.
+
+       ENXIO  A request was made of a nonexistent device, or the request was outside the capabilities of the device.
+
+       ENXIO  A hangup occurred on the STREAM being written to.
+
+       A write to a STREAMS file may fail if an error message has been received at the STREAM head. In this case, errno is set to the value included in the error message.
+
+       The write() function may fail if:
+
+       EACCES A write was attempted on a socket and the calling process does not have appropriate privileges.
+
+       ENETDOWN
+              A write was attempted on a socket and the local network interface used to reach the destination is down.
+
+       ENETUNREACH
+              A write was attempted on a socket and no route to the network is present.
+
+       The following sections are informative.
+
+EXAMPLES
+   Writing from a Buffer
+       The following example writes data from the buffer pointed to by buf to the file associated with the file descriptor fd.
+
+           #include <sys/types.h>
+           #include <string.h>
+           ...
+           char buf[20];
+           size_t nbytes;
+           ssize_t bytes_written;
+           int fd;
+           ...
+           strcpy(buf, "This is a test\n");
+           nbytes = strlen(buf);
+
+           bytes_written = write(fd, buf, nbytes);
+           ...
+
+APPLICATION USAGE
+       None.
+
+RATIONALE
+       See also the RATIONALE section in read().
+
+       An attempt to write to a pipe or FIFO has several major characteristics:
+
+        *  Atomic/non-atomic: A write is atomic if the whole amount written in one operation is not interleaved with data from any other process.  This is useful when there are multiple
+           writers  sending  data  to a single reader. Applications need to know how large a write request can be expected to be performed atomically. This maximum is called {PIPE_BUF}.
+           This volume of POSIX.1‐2008 does not say whether write requests for more than {PIPE_BUF} bytes are atomic, but requires that writes of {PIPE_BUF}  or  fewer  bytes  shall  be
+           atomic.
+
+        *  Blocking/immediate:  Blocking is only possible with O_NONBLOCK clear. If there is enough space for all the data requested to be written immediately, the implementation should
+           do so. Otherwise, the calling thread may block; that is, pause until enough space is available for writing. The effective size of a pipe or FIFO (the maximum amount that  can
+           be written in one operation without blocking) may vary dynamically, depending on the implementation, so it is not possible to specify a fixed value for it.
+
+        *  Complete/partial/deferred: A write request:
+
+               int fildes;
+               size_t nbyte;
+               ssize_t ret;
+               char *buf;
+
+               ret = write(fildes, buf, nbyte);
+
+           may return:
+
+           Complete  ret=nbyte
+
+           Partial   ret<nbyte
+
+                     This  shall  never  happen  if  nbyte≤{PIPE_BUF}.   If  it  does  happen  (with nbyte>{PIPE_BUF}), this volume of POSIX.1‐2008 does not guarantee atomicity, even if
+                     ret≤{PIPE_BUF}, because atomicity is guaranteed according to the amount requested, not the amount written.
+
+           Deferred: ret=−1, errno=[EAGAIN]
+
+                     This error indicates that a later request may succeed. It does not indicate that it shall succeed, even if nbyte≤{PIPE_BUF}, because if no process  reads  from  the
+                     pipe  or  FIFO,  the  write never succeeds. An application could usefully count the number of times [EAGAIN] is caused by a particular value of nbyte>{PIPE_BUF} and
+                     perhaps do later writes with a smaller value, on the assumption that the effective size of the pipe may have decreased.
+
+           Partial and deferred writes are only possible with O_NONBLOCK set.
+
+       The relations of these properties are shown in the following tables:
+
+                                                            ┌───────────────────────────────────────────────────────────────────────┐
+                                                            │            Write to a Pipe or FIFO with O_NONBLOCK clear              │
+                                                            ├─────────────────────┬─────────────────────────────────────────────────┤
+                                                            │Immediately Writable:│     None            Some            nbyte       │
+                                                            ├─────────────────────┼─────────────────────────────────────────────────┤
+                                                            │nbyte≤{PIPE_BUF}     │Atomic blocking Atomic blocking Atomic immediate │
+                                                            │                     │nbyte           nbyte           nbyte            │
+                                                            ├─────────────────────┼─────────────────────────────────────────────────┤
+                                                            │nbyte>{PIPE_BUF}     │Blocking nbyte  Blocking nbyte  Blocking nbyte   │
+                                                            └─────────────────────┴─────────────────────────────────────────────────┘
+       If the O_NONBLOCK flag is clear, a write request shall block if the amount writable immediately is less than that requested. If the flag is set  (by  fcntl()),  a  write  request
+       shall never block.
+
+                                                                ┌───────────────────────────────────────────────────────────────┐
+                                                                │         Write to a Pipe or FIFO with O_NONBLOCK set           │
+                                                                ├─────────────────────┬─────────────────────────────────────────┤
+                                                                │Immediately Writable:│    None         Some          nbyte     │
+                                                                ├─────────────────────┼─────────────────────────────────────────┤
+                                                                │nbyte≤{PIPE_BUF}     │−1, [EAGAIN] −1, [EAGAIN]  Atomic nbyte  │
+                                                                ├─────────────────────┼─────────────────────────────────────────┤
+                                                                │nbyte>{PIPE_BUF}     │−1, [EAGAIN] <nbyte or −1, ≤nbyte or −1, │
+                                                                │                     │             [EAGAIN]      [EAGAIN]      │
+                                                                └─────────────────────┴─────────────────────────────────────────┘
+       There  is no exception regarding partial writes when O_NONBLOCK is set.  With the exception of writing to an empty pipe, this volume of POSIX.1‐2008 does not specify exactly when
+       a partial write is performed since that would require specifying internal details of the implementation. Every application should be prepared to handle partial writes when O_NON‐
+       BLOCK is set and the requested amount is greater than {PIPE_BUF}, just as every application should be prepared to handle partial writes on other kinds of file descriptors.
+
+       The  intent  of  forcing  writing  at  least  one  byte  if any can be written is to assure that each write makes progress if there is any room in the pipe. If the pipe is empty,
+       {PIPE_BUF} bytes must be written; if not, at least some progress must have been made.
+
+       Where this volume of POSIX.1‐2008 requires −1 to be returned and errno set to [EAGAIN], most historical implementations return zero (with the O_NDELAY flag set, which is the his‐
+       torical  predecessor of O_NONBLOCK, but is not itself in this volume of POSIX.1‐2008). The error indications in this volume of POSIX.1‐2008 were chosen so that an application can
+       distinguish these cases from end-of-file. While write() cannot receive an indication of end-of-file, read() can, and the two functions have  similar  return  values.  Also,  some
+       existing  systems  (for  example,  Eighth Edition) permit a write of zero bytes to mean that the reader should get an end-of-file indication; for those systems, a return value of
+       zero from write() indicates a successful write of an end-of-file indication.
+
+       Implementations are allowed, but not required, to perform error checking for write() requests of zero bytes.
+
+       The concept of a {PIPE_MAX} limit (indicating the maximum number of bytes that can be written to a pipe in a single operation) was considered, but rejected, because this  concept
+       would unnecessarily limit application writing.
+
+       See also the discussion of O_NONBLOCK in read().
+
+       Writes  can be serialized with respect to other reads and writes. If a read() of file data can be proven (by any means) to occur after a write() of the data, it must reflect that
+       write(), even if the calls are made by different processes. A similar requirement applies to multiple write operations to the same file position. This is needed to guarantee  the
+       propagation  of  data  from  write() calls to subsequent read() calls. This requirement is particularly significant for networked file systems, where some caching schemes violate
+       these semantics.
+
+       Note that this is specified in terms of read() and write().  The XSI extensions readv() and writev() also obey these semantics. A new ``high-performance'' write analog  that  did
+       not  follow  these  serialization  requirements would also be permitted by this wording. This volume of POSIX.1‐2008 is also silent about any effects of application-level caching
+       (such as that done by stdio).
+
+       This volume of POSIX.1‐2008 does not specify the value of the file offset after an error is returned; there are too many cases. For programming errors, such as [EBADF], the  con‐
+       cept  is  meaningless since no file is involved. For errors that are detected immediately, such as [EAGAIN], clearly the pointer should not change. After an interrupt or hardware
+       error, however, an updated value would be very useful and is the behavior of many implementations.
+
+       This volume of POSIX.1‐2008 does not specify behavior of concurrent writes to a file from multiple processes. Applications should use some form of concurrency control.
+
+       This volume of POSIX.1‐2008 intentionally does not specify any pwrite() errors related to pipes, FIFOs, and sockets other than [ESPIPE].
+
+FUTURE DIRECTIONS
+       None.
+
+SEE ALSO
+       chmod(), creat(), dup(), fcntl(), getrlimit(), lseek(), open(), pipe(), read(), ulimit(), writev()
+
+       The Base Definitions volume of POSIX.1‐2008, <limits.h>, <stropts.h>, <sys_uio.h>, <unistd.h>
+
+COPYRIGHT
+       Portions of this text are reprinted and reproduced in electronic form from IEEE Std 1003.1, 2013 Edition, Standard for Information Technology -- Portable Operating System  Inter‐
+       face  (POSIX),  The  Open  Group  Base  Specifications  Issue  7,  Copyright  (C) 2013 by the Institute of Electrical and Electronics Engineers, Inc and The Open Group.  (This is
+       POSIX.1-2008 with the 2013 Technical Corrigendum 1 applied.) In the event of any discrepancy between this version and the original IEEE and The Open Group Standard, the  original
+       IEEE and The Open Group Standard is the referee document. The original Standard can be obtained online at http://www.unix.org/online.html .
+
+       Any  typographical  or  formatting errors that appear in this page are most likely to have been introduced during the conversion of the source files to man page format. To report
+       such errors, see https://www.kernel.org/doc/man-pages/reporting_bugs.html .
+
+IEEE/The Open Group                                                                        2013                                                                             WRITE(3POSIX)
+READ(3POSIX)                                                                    POSIX Programmer's Manual                                                                    READ(3POSIX)
+
+PROLOG
+       This  manual  page  is  part  of the POSIX Programmer's Manual.  The Linux implementation of this interface may differ (consult the corresponding Linux manual page for details of
+       Linux behavior), or the interface may not be implemented on Linux.
+
+NAME
+       pread, read — read from a file
+
+SYNOPSIS
+       #include <unistd.h>
+
+       ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
+       ssize_t read(int fildes, void *buf, size_t nbyte);
+
+DESCRIPTION
+       The read() function shall attempt to read nbyte bytes from the file associated with the open file descriptor, fildes, into the buffer pointed to by buf.  The behavior of multiple
+       concurrent reads on the same pipe, FIFO, or terminal device is unspecified.
+
+       Before  any  action  described  below  is  taken, and if nbyte is zero, the read() function may detect and return errors as described below. In the absence of errors, or if error
+       detection is not performed, the read() function shall return zero and have no other results.
+
+       On files that support seeking (for example, a regular file), the read() shall start at a position in the file given by the file offset associated with fildes.   The  file  offset
+       shall be incremented by the number of bytes actually read.
+
+       Files that do not support seeking—for example, terminals—always read from the current position. The value of a file offset associated with such a file is undefined.
+
+       No  data  transfer shall occur past the current end-of-file. If the starting position is at or after the end-of-file, 0 shall be returned.  If the file refers to a device special
+       file, the result of subsequent read() requests is implementation-defined.
+
+       If the value of nbyte is greater than {SSIZE_MAX}, the result is implementation-defined.
+
+       When attempting to read from an empty pipe or FIFO:
+
+        *  If no process has the pipe open for writing, read() shall return 0 to indicate end-of-file.
+
+        *  If some process has the pipe open for writing and O_NONBLOCK is set, read() shall return −1 and set errno to [EAGAIN].
+
+        *  If some process has the pipe open for writing and O_NONBLOCK is clear, read() shall block the calling thread until some data is written or the pipe is closed by all processes
+           that had the pipe open for writing.
+
+       When attempting to read a file (other than a pipe or FIFO) that supports non-blocking reads and has no data currently available:
+
+        *  If O_NONBLOCK is set, read() shall return −1 and set errno to [EAGAIN].
+
+        *  If O_NONBLOCK is clear, read() shall block the calling thread until some data becomes available.
+
+        *  The use of the O_NONBLOCK flag has no effect if there is some data available.
+
+       The  read() function reads data previously written to a file. If any portion of a regular file prior to the end-of-file has not been written, read() shall return bytes with value
+       0. For example, lseek() allows the file offset to be set beyond the end of existing data in the file. If data is later written at this point, subsequent reads in the gap  between
+       the previous end of data and the newly written data shall return bytes with value 0 until data is written into the gap.
+
+       Upon  successful  completion,  where  nbyte is greater than 0, read() shall mark for update the last data access timestamp of the file, and shall return the number of bytes read.
+       This number shall never be greater than nbyte.  The value returned may be less than nbyte if the number of bytes left in the file is less than nbyte, if the  read()  request  was
+       interrupted  by  a  signal,  or  if the file is a pipe or FIFO or special file and has fewer than nbyte bytes immediately available for reading. For example, a read() from a file
+       associated with a terminal may return one typed line of data.
+
+       If a read() is interrupted by a signal before it reads any data, it shall return −1 with errno set to [EINTR].
+
+       If a read() is interrupted by a signal after it has successfully read some data, it shall return the number of bytes read.
+
+       For regular files, no data transfer shall occur past the offset maximum established in the open file description associated with fildes.
+
+       If fildes refers to a socket, read() shall be equivalent to recv() with no flags set.
+
+       If the O_DSYNC and O_RSYNC bits have been set, read I/O operations on the file descriptor shall complete as defined by synchronized I/O data integrity completion. If  the  O_SYNC
+       and O_RSYNC bits have been set, read I/O operations on the file descriptor shall complete as defined by synchronized I/O file integrity completion.
+
+       If fildes refers to a shared memory object, the result of the read() function is unspecified.
+
+       If fildes refers to a typed memory object, the result of the read() function is unspecified.
+
+       A  read()  from a STREAMS file can read data in three different modes: byte-stream mode, message-nondiscard mode, and message-discard mode. The default shall be byte-stream mode.
+       This can be changed using the I_SRDOPT ioctl() request, and can be tested with I_GRDOPT ioctl().  In byte-stream mode, read() shall retrieve data from the STREAM  until  as  many
+       bytes as were requested are transferred, or until there is no more data to be retrieved.  Byte-stream mode ignores message boundaries.
+
+       In  STREAMS  message-nondiscard mode, read() shall retrieve data until as many bytes as were requested are transferred, or until a message boundary is reached. If read() does not
+       retrieve all the data in a message, the remaining data shall be left on the STREAM, and can be retrieved by the next read() call. Message-discard mode also retrieves  data  until
+       as  many  bytes as were requested are transferred, or a message boundary is reached.  However, unread data remaining in a message after the read() returns shall be discarded, and
+       shall not be available for a subsequent read(), getmsg(), or getpmsg() call.
+
+       How read() handles zero-byte STREAMS messages is determined by the current read mode setting. In byte-stream mode, read() shall accept data until it  has  read  nbyte  bytes,  or
+       until  there  is  no more data to read, or until a zero-byte message block is encountered. The read() function shall then return the number of bytes read, and place the zero-byte
+       message back on the STREAM to be retrieved by the next read(), getmsg(), or getpmsg().  In message-nondiscard mode or message-discard mode, a zero-byte message shall return 0 and
+       the  message  shall  be  removed  from  the STREAM. When a zero-byte message is read as the first message on a STREAM, the message shall be removed from the STREAM and 0 shall be
+       returned, regardless of the read mode.
+
+       A read() from a STREAMS file shall return the data in the message at the front of the STREAM head read queue, regardless of the priority band of the message.
+
+       By default, STREAMs are in control-normal mode, in which a read() from a STREAMS file can only process messages that contain a data part but do not contain a  control  part.  The
+       read()  shall  fail if a message containing a control part is encountered at the STREAM head. This default action can be changed by placing the STREAM in either control-data mode
+       or control-discard mode with the I_SRDOPT ioctl() command. In control-data mode, read() shall convert any control part to data and pass it to the application before  passing  any
+       data part originally present in the same message.  In control-discard mode, read() shall discard message control parts but return to the process any data part in the message.
+
+       In  addition,  read()  shall fail if the STREAM head had processed an asynchronous error before the call. In this case, the value of errno shall not reflect the result of read(),
+       but reflect the prior error. If a hangup occurs on the STREAM being read, read() shall continue to operate normally until the STREAM head read  queue  is  empty.  Thereafter,  it
+       shall return 0.
+
+       The  pread()  function  shall be equivalent to read(), except that it shall read from a given position in the file without changing the file pointer. The first three arguments to
+       pread() are the same as read() with the addition of a fourth argument offset for the desired position inside the file. An attempt to perform a pread() on a file that is incapable
+       of seeking shall result in an error.
+
+RETURN VALUE
+       Upon  successful  completion,  these  functions shall return a non-negative integer indicating the number of bytes actually read. Otherwise, the functions shall return −1 and set
+       errno to indicate the error.
+
+ERRORS
+       These functions shall fail if:
+
+       EAGAIN The file is neither a pipe, nor a FIFO, nor a socket, the O_NONBLOCK flag is set for the file descriptor, and the thread would be delayed in the read operation.
+
+       EBADF  The fildes argument is not a valid file descriptor open for reading.
+
+       EBADMSG
+              The file is a STREAM file that is set to control-normal mode and the message waiting to be read includes a control part.
+
+       EINTR  The read operation was terminated due to the receipt of a signal, and no data was transferred.
+
+       EINVAL The STREAM or multiplexer referenced by fildes is linked (directly or indirectly) downstream from a multiplexer.
+
+       EIO    The process is a member of a background process group attempting to read from its controlling terminal, and either the calling thread is blocking SIGTTIN or the process is
+              ignoring SIGTTIN or the process group of the process is orphaned. This error may also be generated for implementation-defined reasons.
+
+       EISDIR The  fildes  argument  refers to a directory and the implementation does not allow the directory to be read using read() or pread().  The readdir() function should be used
+              instead.
+
+       EOVERFLOW
+              The file is a regular file, nbyte is greater than 0, the starting position is before the end-of-file, and the starting position is greater than or equal to the offset max‐
+              imum established in the open file description associated with fildes.
+
+       The pread() function shall fail if:
+
+       EINVAL The file is a regular file or block special file, and the offset argument is negative. The file pointer shall remain unchanged.
+
+       ESPIPE The file is a pipe, FIFO, or socket.
+
+       The read() function shall fail if:
+
+       EAGAIN The file is a pipe or FIFO, the O_NONBLOCK flag is set for the file descriptor, and the thread would be delayed in the read operation.
+
+       EAGAIN or EWOULDBLOCK
+              The file is a socket, the O_NONBLOCK flag is set for the file descriptor, and the thread would be delayed in the read operation.
+
+       ECONNRESET
+              A read was attempted on a socket and the connection was forcibly closed by its peer.
+
+       ENOTCONN
+              A read was attempted on a socket that is not connected.
+
+       ETIMEDOUT
+              A read was attempted on a socket and a transmission timeout occurred.
+
+       These functions may fail if:
+
+       EIO    A physical I/O error has occurred.
+
+       ENOBUFS
+              Insufficient resources were available in the system to perform the operation.
+
+       ENOMEM Insufficient memory was available to fulfill the request.
+
+       ENXIO  A request was made of a nonexistent device, or the request was outside the capabilities of the device.
+
+       The following sections are informative.
+
+EXAMPLES
+   Reading Data into a Buffer
+       The following example reads data from the file associated with the file descriptor fd into the buffer pointed to by buf.
+
+           #include <sys/types.h>
+           #include <unistd.h>
+           ...
+           char buf[20];
+           size_t nbytes;
+           ssize_t bytes_read;
+           int fd;
+           ...
+           nbytes = sizeof(buf);
+           bytes_read = read(fd, buf, nbytes);
+           ...
+
+APPLICATION USAGE
+       None.
+
+RATIONALE
+       This  volume of POSIX.1‐2008 does not specify the value of the file offset after an error is returned; there are too many cases. For programming errors, such as [EBADF], the con‐
+       cept is meaningless since no file is involved. For errors that are detected immediately, such as [EAGAIN], clearly the pointer should not change. After an interrupt  or  hardware
+       error, however, an updated value would be very useful and is the behavior of many implementations.
+
+       Note  that  a  read()  of zero bytes does not modify the last data access timestamp. A read() that requests more than zero bytes, but returns zero, is required to modify the last
+       data access timestamp.
+
+       Implementations are allowed, but not required, to perform error checking for read() requests of zero bytes.
+
+   Input and Output
+       The use of I/O with large byte counts has always presented problems.  Ideas such as lread() and lwrite() (using and returning longs) were considered  at  one  time.  The  current
+       solution  is  to  use  abstract  types  on the ISO C standard function to read() and write().  The abstract types can be declared so that existing functions work, but can also be
+       declared so that larger types can be represented in future implementations. It is presumed that whatever constraints limit the maximum range of size_t  also  limit  portable  I/O
+       requests  to  the same range. This volume of POSIX.1‐2008 also limits the range further by requiring that the byte count be limited so that a signed return value remains meaning‐
+       ful. Since the return type is also a (signed) abstract type, the byte count can be defined by the implementation to be larger than an int can hold.
+
+       The standard developers considered adding atomicity requirements to a pipe or FIFO, but recognized that due to the nature of pipes and FIFOs there could be no guarantee of  atom‐
+       icity of reads of {PIPE_BUF} or any other size that would be an aid to applications portability.
+
+       This  volume  of POSIX.1‐2008 requires that no action be taken for read() or write() when nbyte is zero. This is not intended to take precedence over detection of errors (such as
+       invalid buffer pointers or file descriptors). This is consistent with the rest of this volume of POSIX.1‐2008, but the phrasing here could be misread to require detection of  the
+       zero case before any other errors.  A value of zero is to be considered a correct value, for which the semantics are a no-op.
+
+       I/O  is  intended  to be atomic to ordinary files and pipes and FIFOs.  Atomic means that all the bytes from a single operation that started out together end up together, without
+       interleaving from other I/O operations. It is a known attribute of terminals that this is not honored, and terminals are explicitly (and implicitly permanently) excepted,  making
+       the behavior unspecified. The behavior for other device types is also left unspecified, but the wording is intended to imply that future standards might choose to specify atomic‐
+       ity (or not).
+
+       There were recommendations to add format parameters to read() and write() in order to handle networked transfers among heterogeneous file system and base hardware types.  Such  a
+       facility  may  be  required  for support by the OSI presentation of layer services. However, it was determined that this should correspond with similar C-language facilities, and
+       that is beyond the scope of this volume of POSIX.1‐2008. The concept was suggested to the developers of the ISO C standard for their consideration as a possible area  for  future
+       work.
+
+       In  4.3  BSD, a read() or write() that is interrupted by a signal before transferring any data does not by default return an [EINTR] error, but is restarted. In 4.2 BSD, 4.3 BSD,
+       and the Eighth Edition, there is an additional function, select(), whose purpose is to pause until specified activity (data to read, space to write, and so  on)  is  detected  on
+       specified file descriptors. It is common in applications written for those systems for select() to be used before read() in situations (such as keyboard input) where interruption
+       of I/O due to a signal is desired.
+
+       The issue of which files or file types are interruptible is considered an implementation design issue. This is often affected primarily by hardware and reliability issues.
+
+       There are no references to actions taken following an ``unrecoverable error''. It is considered beyond the scope of this volume of POSIX.1‐2008 to describe what  happens  in  the
+       case of hardware errors.
+
+       Earlier  versions  of  this  standard allowed two very different behaviors with regard to the handling of interrupts. In order to minimize the resulting confusion, it was decided
+       that POSIX.1‐2008 should support only one of these behaviors. Historical practice on AT&T-derived systems was to have read() and write() return −1 and set errno to  [EINTR]  when
+       interrupted  after  some,  but  not  all,  of the data requested had been transferred. However, the US Department of Commerce FIPS 151‐1 and FIPS 151‐2 require the historical BSD
+       behavior, in which read() and write() return the number of bytes actually transferred before the interrupt.  If −1 is returned when any data is transferred, it  is  difficult  to
+       recover  from the error on a seekable device and impossible on a non-seekable device. Most new implementations support this behavior.  The behavior required by POSIX.1‐2008 is to
+       return the number of bytes transferred.
+
+       POSIX.1‐2008 does not specify when an implementation that buffers read()s actually moves the data into the user-supplied buffer, so an implementation may choose to do this at the
+       latest possible moment.  Therefore, an interrupt arriving earlier may not cause read() to return a partial byte count, but rather to return −1 and set errno to [EINTR].
+
+       Consideration  was  also  given to combining the two previous options, and setting errno to [EINTR] while returning a short count. However, not only is there no existing practice
+       that implements this, it is also contradictory to the idea that when errno is set, the function responsible shall return −1.
+
+       This volume of POSIX.1‐2008 intentionally does not specify any pread() errors related to pipes, FIFOs, and sockets other than [ESPIPE].
+
+FUTURE DIRECTIONS
+       None.
+
+SEE ALSO
+       fcntl(), ioctl(), lseek(), open(), pipe(), readv()
+
+       The Base Definitions volume of POSIX.1‐2008, Chapter 11, General Terminal Interface, <stropts.h>, <sys_uio.h>, <unistd.h>
+
+COPYRIGHT
+       Portions of this text are reprinted and reproduced in electronic form from IEEE Std 1003.1, 2013 Edition, Standard for Information Technology -- Portable Operating System  Inter‐
+       face  (POSIX),  The  Open  Group  Base  Specifications  Issue  7,  Copyright  (C) 2013 by the Institute of Electrical and Electronics Engineers, Inc and The Open Group.  (This is
+       POSIX.1-2008 with the 2013 Technical Corrigendum 1 applied.) In the event of any discrepancy between this version and the original IEEE and The Open Group Standard, the  original
+       IEEE and The Open Group Standard is the referee document. The original Standard can be obtained online at http://www.unix.org/online.html .
+
+       Any  typographical  or  formatting errors that appear in this page are most likely to have been introduced during the conversion of the source files to man page format. To report
+       such errors, see https://www.kernel.org/doc/man-pages/reporting_bugs.html .
+
+IEEE/The Open Group                                                                        2013                                                                              READ(3POSIX)
